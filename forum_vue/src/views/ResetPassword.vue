@@ -1,6 +1,7 @@
 <template>
   <div class="auth-page">
     <el-card class="auth-card">
+      <router-link to="/" class="back-link">← 返回首頁</router-link>
       <h2 class="title">重設密碼</h2>
 
       <el-alert v-if="!form.token || !form.email" type="warning" :closable="false" style="margin-bottom: 16px">
@@ -97,6 +98,16 @@ async function onSubmit() {
 .auth-card {
   width: 100%;
   max-width: 400px;
+}
+.back-link {
+  display: inline-block;
+  color: #909399;
+  text-decoration: none;
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+.back-link:hover {
+  color: #409eff;
 }
 .title {
   text-align: center;
