@@ -33,6 +33,7 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: forum
+      TZ: Asia/Taipei                # 容器 OS 時區 → MySQL NOW() 跟著走
     volumes:
       # 持久化 DB 資料
       - forum-sb-db-data:/var/lib/mysql
@@ -80,6 +81,7 @@ services:
         condition: service_started
     environment:
       # 覆蓋 application.yml 預設值 → 走 Docker 內部網路
+      TZ: Asia/Taipei                # 容器時區 → JVM TimeZone.getDefault() 跟著 → LocalDateTime.now() 是台北時間
       DB_HOST: db
       DB_PORT: 3306
       DB_USERNAME: root
