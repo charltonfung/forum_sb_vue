@@ -13,7 +13,7 @@
 #   - http://localhost:5173  → Vue dev server
 #   - http://localhost:8090  → Spring Boot API
 #   - http://localhost:8026  → Mailpit Web UI
-#   - localhost:3308         → MySQL（GUI 工具連用，帳密 root/root）
+#   - localhost:3307         → MySQL（GUI 工具連用，帳密 root/root）
 #
 # Docker 內部 service 之間用 service name 互通：
 #   - backend  連 db：    host = "db",     port = 3306
@@ -29,7 +29,7 @@ services:
     image: mysql:8
     container_name: forum-sb-db
     ports:
-      - "3308:3306"   # host 3308（避開本機 MySQL 預設 3306）→ container 3306
+      - "3307:3306"   # host 3307（避開本機 MySQL 預設 3306）→ container 3306
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: forum
