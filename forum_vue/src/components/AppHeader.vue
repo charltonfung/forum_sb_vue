@@ -2,7 +2,7 @@
   頂部導覽列
   ============================================================
   - 左邊 Logo（點擊回首頁）
-  - 右邊：未登入 → 登入 / 註冊；已登入 → 發表文章 / 使用者下拉選單
+  - 右邊：未登入 → 登入 / 註冊；已登入 → 使用者下拉選單（發表文章按鈕在首頁列表上）
 -->
 <template>
   <header class="header">
@@ -16,11 +16,6 @@
         </template>
 
         <template v-else>
-          <el-button type="primary" plain @click="$router.push('/articles/create')">
-            <el-icon><EditPen /></el-icon>
-            <span style="margin-left: 4px">發表文章</span>
-          </el-button>
-
           <el-dropdown @command="handleCommand">
             <span class="user-trigger">
               {{ auth.user?.name || auth.user?.email }}
@@ -43,7 +38,7 @@
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { ElMessage } from 'element-plus'
-import { ArrowDown, EditPen } from '@element-plus/icons-vue'
+import { ArrowDown } from '@element-plus/icons-vue'
 
 const auth = useAuthStore()
 const router = useRouter()
