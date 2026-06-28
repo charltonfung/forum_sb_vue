@@ -1,0 +1,91 @@
+# ============================================================
+# Spring Boot 設定檔
+# ============================================================
+# YAML 用「縮排決定階層」，不要混 tab 與空白，全部用「空白」。
+#
+# 三種放設定的層級：
+#   1. application.yml          ← 共用預設（這個檔）
+#   2. application-{profile}.yml ← 環境特化（dev / prod）
+#   3. 環境變數                  ← 最高優先（部署時用）
+#
+# 取設定優先級：環境變數 > profile yml > application.yml
+# ============================================================
+
+server:
+  port: 8090        # 不跟 e-commerce 的 8080/8081 衝突
+  servlet:
+    context-path: / # 不加路徑前綴，前端打 /api/... 就好
+
+spring:
+  application:
+    name: forum-sb
+
+  # ----------------------------------------------------------
+  # MySQL 連線
+  # ----------------------------------------------------------
+  # 本機跑：DB_HOST 沒設 → 用 localhost
+  # Docker 跑：docker-compose 會設 DB_HOST=db 走 Docker 內部網路
+  # ----------------------------------------------------------
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/forum?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Taipei&allowPublicKeyRetrieval=true&useSSL=false
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:root}    # ${ENV:default} 語法 = 環境變數沒設就用 default
+
+  # ----------------------------------------------------------
+  # Mail（密碼重設信件用）
+  # 本機跑：MAIL_HOST=localhost（要自己啟動 Mailpit/MailHog）
+  # Docker 跑：docker-compose 設 MAIL_HOST=mailpit 走 Docker 內部網路
+  # ----------------------------------------------------------
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
+
+# ----------------------------------------------------------
+# MyBatis-Plus 設定
+# ----------------------------------------------------------
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true   # DB 欄位 user_id → Java userId 自動對應
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl   # SQL 印到 console（dev 友善）
+  global-config:
+    db-config:
+      logic-delete-field: deletedAt      # 全域指定軟刪除欄位
+      logic-not-delete-value: 'null'     # 未刪除 = NULL
+      logic-delete-value: 'now()'        # 已刪除 = 寫入當下時間
+
+# ----------------------------------------------------------
+# 自家 forum.* 設定（@ConfigurationProperties 會抓）
+# ----------------------------------------------------------
+forum:
+  jwt:
+    # JWT 簽章密鑰：HS256 要求至少 32 bytes（256 bits）
+    # 正式環境一定要透過環境變數覆寫，不要把 secret commit 進 repo
+    secret: ${JWT_SECRET:forum-dev-secret-change-me-in-production-32bytes!}
+    # token 有效時間（秒）。86400 = 24 小時
+    expiration-seconds: 86400
+    # HTTP header 名稱與 prefix（前端 axios 攔截器要對齊）
+    header: Authorization
+    prefix: "Bearer "
+
+  password-reset:
+    # 密碼重設連結有效時間（分鐘）
+    expiration-minutes: 60
+    # 信件裡的連結會指向「前端 reset 頁」，不是後端 API
+    # 格式：{frontend-base-url}/reset-password?token=xxx&email=xxx
+    frontend-reset-url: ${FRONTEND_RESET_URL:http://localhost:5173/reset-password}
+    mail-from: ${MAIL_FROM:no-reply@forum.local}
+
+  cors:
+    # 允許的前端來源。Vite dev server 預設 5173
+    allowed-origins:
+      - http://localhost:5173
+      - http://127.0.0.1:5173

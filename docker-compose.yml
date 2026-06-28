@@ -1,0 +1,125 @@
+# ============================================================
+# Forum（Spring Boot + Vue）開發環境 Docker Compose
+# ============================================================
+# 一指令啟動整套：MySQL / Mailpit / Spring Boot 後端 / Vue 前端
+#
+#   docker compose up -d --build       # 啟動（背景，第一次會 build image）
+#   docker compose logs -f backend     # 看後端 log
+#   docker compose logs -f frontend    # 看前端 log
+#   docker compose down                # 停止
+#   docker compose down -v             # 連 DB volume 一起砍
+#
+# 對應 port（刻意挑非預設值，避開本機常駐服務 / 其他專案）：
+#   - http://localhost:5173  → Vue dev server
+#   - http://localhost:8090  → Spring Boot API
+#   - http://localhost:8026  → Mailpit Web UI
+#   - localhost:3308         → MySQL（GUI 工具連用，帳密 root/root）
+#
+# Docker 內部 service 之間用 service name 互通：
+#   - backend  連 db：    host = "db",     port = 3306
+#   - backend  連 mailpit：host = "mailpit", port = 1025
+#   - frontend 連 backend：host = "backend", port = 8090（Vite proxy 用）
+# ============================================================
+
+services:
+  # ----------------------------------------------------------
+  # db：MySQL 8
+  # ----------------------------------------------------------
+  db:
+    image: mysql:8
+    container_name: forum-sb-db
+    ports:
+      - "3308:3306"   # host 3308（避開本機 MySQL 預設 3306）→ container 3306
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: forum
+    volumes:
+      # 持久化 DB 資料
+      - forum-sb-db-data:/var/lib/mysql
+      # 設計上「DB container 生命週期」跟「schema 初始化」解耦：
+      #   - container up 時只建空 DB（由 MYSQL_DATABASE env var 處理）
+      #   - schema + seed 由 ./db-init.sh 手動觸發（setup.sh 第一次會自動 call）
+      # 這樣之後新增 table 時：git pull 後跑 ./db-init.sh 套用，
+      # 不用 docker compose down -v 砍掉所有資料。
+      # 想完全重來：./db-reset.sh
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # ----------------------------------------------------------
+  # mailpit：開發用 SMTP server + Web UI
+  # ----------------------------------------------------------
+  mailpit:
+    image: axllent/mailpit
+    container_name: forum-sb-mailpit
+    ports:
+      - "1026:1025"   # SMTP（host 1026，避開 Mailpit / MailHog 預設 1025）
+      - "8026:8025"   # Web UI（host 8026，避開 Mailpit / MailHog 預設 8025）
+
+  # ----------------------------------------------------------
+  # backend：Spring Boot
+  # ----------------------------------------------------------
+  backend:
+    build:
+      context: ./forum_sb
+      dockerfile: ../docker/backend.Dockerfile
+    container_name: forum-sb-backend
+    ports:
+      - "8090:8090"
+    volumes:
+      # source code mount 進來，host 改 .java → container mvn 自動重編
+      - ./forum_sb:/app
+      # Maven 套件 cache，避免每次重 build 都重抓（第一次跑會慢）
+      - forum-sb-maven-cache:/root/.m2
+    depends_on:
+      db:
+        condition: service_healthy   # 等 MySQL 就緒才啟動
+      mailpit:
+        condition: service_started
+    environment:
+      # 覆蓋 application.yml 預設值 → 走 Docker 內部網路
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_USERNAME: root
+      DB_PASSWORD: root
+      MAIL_HOST: mailpit
+      MAIL_PORT: 1025
+      MAIL_FROM: no-reply@forum.local
+      # 密碼重設信件裡的連結要指向 host 的前端（不是 container 內的）
+      FRONTEND_RESET_URL: http://localhost:5173/reset-password
+      JWT_SECRET: forum-dev-secret-change-me-in-production-32bytes!
+
+  # ----------------------------------------------------------
+  # frontend：Vue 3 + Vite dev server
+  # ----------------------------------------------------------
+  # 直接用 node:18 image，不另寫 Dockerfile（dev 階段夠用）
+  # ----------------------------------------------------------
+  frontend:
+    image: node:18
+    container_name: forum-sb-frontend
+    working_dir: /app
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./forum_vue:/app
+      # node_modules 用 named volume，避免 host 的 node_modules（可能是 Mac 編譯的）
+      # 蓋掉 container 內 Linux 編譯的版本
+      - forum-sb-node-cache:/app/node_modules
+    depends_on:
+      backend:
+        condition: service_started
+    environment:
+      # Vite 的 proxy target，container 內部要走 Docker 網路名
+      BACKEND_URL: http://backend:8090
+    # 啟動指令：沒裝過就 npm install，然後跑 Vite dev server（綁 0.0.0.0 讓 host 連得到）
+    command: sh -c "[ -d node_modules ] && [ -n \"$$(ls -A node_modules 2>/dev/null)\" ] || npm install; npm run dev -- --host 0.0.0.0"
+
+# ----------------------------------------------------------
+# named volumes
+# ----------------------------------------------------------
+volumes:
+  forum-sb-db-data:        # MySQL 資料
+  forum-sb-maven-cache:    # Maven 套件 cache
+  forum-sb-node-cache:     # Node 套件 cache

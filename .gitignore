@@ -1,0 +1,27 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Docker volumes / runtime
+*.log
+
+# Maven / Node build artifacts（子專案的 .gitignore 也擋了，這邊再保險）
+forum_sb/target/
+forum_vue/node_modules/
+forum_vue/dist/
+forum_vue/.vite/
+
+# 環境變數
+.env
+.env.local
+
+# 子專案的 IDE 自動產生檔
+forum_sb/.idea/
+forum_vue/.idea/
+forum_sb/.vscode/
+forum_vue/.vscode/
