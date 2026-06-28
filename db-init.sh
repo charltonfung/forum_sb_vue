@@ -35,18 +35,22 @@ if ! docker compose ps db | grep -q "Up"; then
     exit 1
 fi
 
+# mysql client 連線 charset：容器內 locale 是 C，client 預設會用 latin1
+# 把 UTF-8 bytes 當 latin1 收 → 中文亂碼。強制覆蓋成 utf8mb4。
+MYSQL_OPTS="--default-character-set=utf8mb4"
+
 # 2. 套用 schema（idempotent，安全重跑）
 echo "[1/2] Applying schema..."
-docker compose exec -T db mysql -u"$DB_USER" -p"$DB_PASS" "$DB_NAME" < "$SCHEMA_FILE"
+docker compose exec -T db mysql $MYSQL_OPTS -u"$DB_USER" -p"$DB_PASS" "$DB_NAME" < "$SCHEMA_FILE"
 echo "      OK"
 
 # 3. 檢查 users 表是否為空
-USER_COUNT=$(docker compose exec -T db mysql -u"$DB_USER" -p"$DB_PASS" -N -e \
+USER_COUNT=$(docker compose exec -T db mysql $MYSQL_OPTS -u"$DB_USER" -p"$DB_PASS" -N -e \
     "SELECT COUNT(*) FROM $DB_NAME.users" 2>/dev/null | tr -d '\r' || echo 0)
 
 if [ "$USER_COUNT" = "0" ]; then
     echo "[2/2] users 表是空的 → 灌 seed 資料..."
-    docker compose exec -T db mysql -u"$DB_USER" -p"$DB_PASS" "$DB_NAME" < "$SEED_FILE"
+    docker compose exec -T db mysql $MYSQL_OPTS -u"$DB_USER" -p"$DB_PASS" "$DB_NAME" < "$SEED_FILE"
     echo "      OK (3 users + 10 articles + comments + likes)"
 else
     echo "[2/2] users 表已有 $USER_COUNT 筆資料 → 跳過 seed（防重複）"

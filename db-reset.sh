@@ -41,7 +41,7 @@ fi
 # 2. DROP 全部表（用 SET FOREIGN_KEY_CHECKS=0 暫時關掉 FK 限制，
 #    不然有 FK 關係的表要按順序砍，麻煩）
 echo "[1/2] Dropping all tables..."
-docker compose exec -T db mysql -u"$DB_USER" -p"$DB_PASS" "$DB_NAME" <<'SQL'
+docker compose exec -T db mysql --default-character-set=utf8mb4 -u"$DB_USER" -p"$DB_PASS" "$DB_NAME" <<'SQL'
 SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS comment_likes;
 DROP TABLE IF EXISTS article_likes;

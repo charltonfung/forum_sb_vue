@@ -49,7 +49,7 @@ DROP TABLE IF EXISTS password_reset_tokens;
 DROP TABLE IF EXISTS users;
 SET FOREIGN_KEY_CHECKS = 1;
 "@
-$dropSql | docker compose exec -T db mysql -u"$DbUser" -p"$DbPass" $DbName
+$dropSql | docker compose exec -T db mysql --default-character-set=utf8mb4 -u"$DbUser" -p"$DbPass" $DbName
 Write-Host "      OK"
 
 # 3. 重新跑 db-init.ps1

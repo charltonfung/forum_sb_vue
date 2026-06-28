@@ -18,11 +18,20 @@
 
 $ErrorActionPreference = "Stop"
 
+# PowerShell 預設 pipe 給 native exe 用 ASCII / Windows-1252，
+# 中文 SQL 內容會被改碼 → 強制改成 UTF-8（無 BOM）。
+$OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+
 $DbUser = "root"
 $DbPass = "root"
 $DbName = "forum"
 $SchemaFile = "forum_sb/src/main/resources/sql/schema.sql"
 $SeedFile = "forum_sb/src/main/resources/sql/seed.sql"
+
+# mysql client 連線 charset：容器內 locale 是 C，client 預設用 latin1。
+# 把 UTF-8 bytes 當 latin1 收 → 中文亂碼。強制覆蓋成 utf8mb4。
+$MysqlOpts = "--default-character-set=utf8mb4"
 
 Write-Host "==========================================" -ForegroundColor Cyan
 Write-Host "  DB Init" -ForegroundColor Cyan
@@ -37,16 +46,16 @@ if ($dbStatus -notmatch "Up") {
 
 # 2. 套用 schema
 Write-Host "[1/2] Applying schema..." -ForegroundColor Yellow
-Get-Content $SchemaFile -Raw | docker compose exec -T db mysql -u"$DbUser" -p"$DbPass" $DbName
+Get-Content $SchemaFile -Raw -Encoding UTF8 | docker compose exec -T db mysql $MysqlOpts -u"$DbUser" -p"$DbPass" $DbName
 Write-Host "      OK"
 
 # 3. 檢查 users 表是否為空
-$userCountRaw = docker compose exec -T db mysql -u"$DbUser" -p"$DbPass" -N -e "SELECT COUNT(*) FROM $DbName.users" 2>$null
+$userCountRaw = docker compose exec -T db mysql $MysqlOpts -u"$DbUser" -p"$DbPass" -N -e "SELECT COUNT(*) FROM $DbName.users" 2>$null
 $userCount = ($userCountRaw -as [int])
 
 if ($userCount -eq 0 -or $null -eq $userCount) {
     Write-Host "[2/2] users 表是空的 -> 灌 seed 資料..." -ForegroundColor Yellow
-    Get-Content $SeedFile -Raw | docker compose exec -T db mysql -u"$DbUser" -p"$DbPass" $DbName
+    Get-Content $SeedFile -Raw -Encoding UTF8 | docker compose exec -T db mysql $MysqlOpts -u"$DbUser" -p"$DbPass" $DbName
     Write-Host "      OK (3 users + 10 articles + comments + likes)"
 } else {
     Write-Host "[2/2] users 表已有 $userCount 筆資料 -> 跳過 seed（防重複）" -ForegroundColor Yellow
