@@ -5,8 +5,7 @@
 ```
 forum/
 ├── forum_sb/   # Spring Boot 後端（port 8090）
-├── forum_vue/  # Vue 3 + Vite 前端（port 5173）
-└── README.md   ← 你正在看
+└── forum_vue/  # Vue 3 + Vite 前端（port 5173）
 ```
 
 ---
@@ -21,9 +20,6 @@ forum/
 | 信件 | Spring Mail（SMTP） |
 | 資料庫 | MySQL 8 |
 | 前端 | Vue 3 + Vite + Vue Router + Pinia |
-| UI | Element Plus |
-| HTTP | Axios |
-| 容器化 | Docker Compose（MySQL / Mailpit / Backend / Frontend） |
 
 **架構**：單模組 Spring Boot 後端 + Vue 3 SPA 前端，JWT 無狀態驗證。
 
@@ -59,7 +55,7 @@ forum/
 
 ---
 
-## 一鍵啟動（推薦）
+## 一鍵啟動
 
 只要本機有 **Docker Desktop**，跑一個 script 就會把所有東西準備好：MySQL + Mailpit + Spring Boot 後端 + Vue 前端 + 灌好 demo 資料。
 
@@ -76,126 +72,33 @@ chmod +x setup.sh db-init.sh db-reset.sh
 .\setup.ps1
 ```
 
-第一次跑約 **5-10 分鐘**（要 build image、下載 Maven 套件、裝 npm 套件）。之後 `docker compose up -d` 秒回。
-
-完成後：
-
-| URL | 是什麼 |
-|---|---|
-| http://localhost:5173 | Vue 前端 |
-| http://localhost:8090 | Spring Boot API |
-| http://localhost:8026 | Mailpit Web UI（看密碼重設信） |
-| localhost:3308 | MySQL（root / root，host 端 GUI 工具用） |
-
-### Demo 帳號
-
-| Email | 密碼 |
-|---|---|
-| alice@example.com | password |
-| bob@example.com | password |
-| charlie@example.com | password |
-
-預設帶 10 篇文章 + 留言 + 點讚資料。
-
-### 常用 Docker 指令
-
-```bash
-docker compose up -d              # 啟動（背景）
-docker compose down               # 停止 + 移除 container（DB 資料保留）
-docker compose down -v            # 連 DB volume 一起砍（資料清空）
-docker compose logs -f backend    # 看 Spring Boot 即時 log
-docker compose logs -f frontend   # 看 Vite 即時 log
-docker compose exec backend bash  # 進到 backend container 內部
-docker compose exec db mysql -uroot -proot forum    # 進 MySQL CLI
-```
+第一次跑約 **5-10 分鐘**（要 build image、下載 Maven 套件、裝 npm 套件）。
 
 ---
 
-## DB 管理（schema / seed 跟 container 解耦）
+## 資料庫操作
 
-容器生命週期跟 DB schema 是**分開的兩件事**：
+容器生命週期跟 DB schema 是分開的兩件事 — `docker compose` 管 container，schema / seed 用以下兩支 script 管：
 
-| 指令 | 做什麼 | 何時用 |
-|---|---|---|
-| `docker compose up -d` | 啟動 container | 平常開機、down 之後 |
-| `./setup.sh` / `.\setup.ps1` | 啟動 container + 第一次 DB init | clone 後第一次 |
-| `./db-init.sh` / `.\db-init.ps1` | 套用 schema（CREATE TABLE IF NOT EXISTS）+ 若 users 表空才灌 seed | **git pull 拉到新表後** |
-| `./db-reset.sh` / `.\db-reset.ps1` | DROP 全部表 → 重 init | schema 改了欄位（idempotent 沒辦法）、想還原乾淨 |
-| `docker compose down -v` | 連 volume 也砍 | 想連 MySQL 系統檔都重建（極少需要） |
-
-### 典型情境
-
-**情境 A：你在 Windows 加了新 table，push 上去；Mac 想同步**
-```bash
-git pull             # 拉到新的 schema.sql
-./db-init.sh         # 套用，舊資料保留、新表加進去
-```
-
-**情境 B：你改了某個欄位的型別 / 加 column**
-```bash
-git pull
-./db-reset.sh        # 必要，CREATE TABLE IF NOT EXISTS 沒辦法套 ALTER
-```
-
-**情境 C：demo 過程亂改了一通想還原**
-```bash
-./db-reset.sh        # 砍表重灌 seed，10 秒回到初始狀態
-```
-
-> SQL 檔結構：
-> - `forum_sb/src/main/resources/sql/schema.sql` — 純 CREATE TABLE IF NOT EXISTS
-> - `forum_sb/src/main/resources/sql/seed.sql` — 純 INSERT（3 users + 10 articles + 留言 + 讚）
-
----
-
-## 啟動方式 B：傳統（本機裝 JDK / Maven / Node / MySQL）
-
-如果不想用 Docker，需要本機已裝 JDK 21+、Maven、Node 18+、MySQL 8。
-
-### 1. 建立資料庫 + 套用 schema + 灌 seed
+### DB init
 
 ```bash
-# 建空 DB
-mysql -uroot -p -e "CREATE DATABASE forum DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-
-# 套用 schema（建表）
-mysql -uroot -p forum < forum_sb/src/main/resources/sql/schema.sql
-
-# 灌 seed 資料（3 users + 10 articles + 留言 + 讚）
-mysql -uroot -p forum < forum_sb/src/main/resources/sql/seed.sql
+./db-init.sh     # Mac / Linux
+.\db-init.ps1    # Windows
 ```
 
-### 2. 啟動後端
+套用 `schema.sql`（CREATE TABLE IF NOT EXISTS，重複跑安全）+ 若 `users` 表為空才灌 `seed.sql`。
+
+### DB reset
 
 ```bash
-cd forum_sb
-mvn spring-boot:run
+./db-reset.sh    # Mac / Linux
+.\db-reset.ps1   # Windows
 ```
 
-如果 MySQL 的 root 密碼不是預設的，可設環境變數：
+DROP 全部表 → 重新跑 db-init。
 
-```bash
-DB_PASSWORD=你的密碼 mvn spring-boot:run
-```
-
-### 3. 啟動前端
-
-```bash
-cd forum_vue
-npm install
-npm run dev
-```
-
-打開 `http://localhost:5173`。
-
-### 4.（可選）啟動 Mailpit 看密碼重設信
-
-```bash
-mailpit
-# 或 docker run -d -p 1025:1025 -p 8025:8025 axllent/mailpit
-```
-
-Web UI 在 http://localhost:8025。
+> SQL 檔在 [`forum_sb/src/main/resources/sql/`](forum_sb/src/main/resources/sql/)：`schema.sql`（建表）+ `seed.sql`（demo 資料）。
 
 ---
 
@@ -219,7 +122,10 @@ forum_sb/src/main/
 │   └── controller/                    ← Auth / Article / Comment / Like / User Controller
 └── resources/
     ├── application.yml                ← 設定檔
-    └── sql/init.sql                   ← 資料庫 schema + seed 資料
+    └── sql/
+        ├── schema.sql                 ← 純 CREATE TABLE IF NOT EXISTS（idempotent）
+        ├── seed.sql                   ← 純 INSERT（3 users + 10 articles + 留言 + 讚）
+        └── migrations/                ← V1__/V2__ 補丁，給「已執行過舊 init.sql」的 DB 用
 ```
 
 ### 前端（`forum_vue/`）
@@ -238,35 +144,3 @@ forum_vue/src/
 ```
 
 ---
-
-## 常用指令
-
-### 後端
-
-```bash
-mvn spring-boot:run         # 啟動 dev server
-mvn clean package           # 打 fat jar，輸出 target/forum-sb-0.0.1-SNAPSHOT.jar
-java -jar target/forum-sb-0.0.1-SNAPSHOT.jar
-mvn test                    # 跑測試
-```
-
-### 前端
-
-```bash
-npm run dev                 # 啟動 dev server（port 5173）
-npm run build               # 打包到 dist/
-npm run preview             # 預覽打包結果
-```
-
----
-
-## 之後可能加什麼
-
-- [ ] Profile 修改（name / email / password）
-- [ ] Email 驗證流程
-- [ ] 留言巢狀回覆
-- [ ] 標籤 / 分類
-- [ ] 全文搜尋（MySQL FULLTEXT 或 Elasticsearch）
-- [ ] Redis 快取列表頁
-- [ ] JWT 黑名單（server-side logout）
-- [ ] 2FA（TOTP）
