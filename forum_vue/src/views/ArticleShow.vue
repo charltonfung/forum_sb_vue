@@ -7,6 +7,9 @@
       <p class="meta">
         <el-icon><User /></el-icon>
         {{ article.authorName || '未知作者' }} · {{ formatDate(article.createdAt) }}
+        <span v-if="isEdited" class="edited">
+          （最後編輯：{{ formatDate(article.updatedAt) }}）
+        </span>
       </p>
       <article class="content">{{ article.content }}</article>
 
@@ -36,7 +39,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getArticle, deleteArticle } from '@/api/article'
 import { likeArticle, unlikeArticle } from '@/api/like'
@@ -52,6 +55,12 @@ const auth = useAuthStore()
 
 const loading = ref(false)
 const article = ref(null)
+
+// updatedAt 在 INSERT 時跟 createdAt 相等（schema 用 ON UPDATE CURRENT_TIMESTAMP）
+// 兩者不同 → 表示這篇文章被編輯過
+const isEdited = computed(() =>
+  article.value && article.value.updatedAt && article.value.updatedAt !== article.value.createdAt
+)
 
 async function fetch() {
   loading.value = true
@@ -107,6 +116,10 @@ onMounted(fetch)
   align-items: center;
   gap: 4px;
   margin: 0 0 20px;
+}
+.edited {
+  color: #c0c4cc;
+  margin-left: 4px;
 }
 .content {
   white-space: pre-wrap;
