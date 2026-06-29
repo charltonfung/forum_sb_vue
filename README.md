@@ -30,6 +30,7 @@ forum/
 - 註冊 / 登入 / 登出（JWT）
 - 文章 CRUD（軟刪除、分頁，每頁 10 篇）
 - 首頁標題模糊搜尋（debounce 300ms 邊打邊查）
+- 「我的文章」入口（nav bar 用戶下拉，列出自己發過的文）
 - 文章下留言（軟刪除、可刪自己的留言）
 - 文章 / 留言點讚（防重複、可取消）
 - 個人資料管理（改名 / 改密碼 / 改 email）
@@ -40,7 +41,7 @@ forum/
 
 | Method | Path | 說明 |
 |---|---|---|
-| GET | `/api/articles?q=` | 文章列表（分頁，`q` 可選模糊搜尋標題） |
+| GET | `/api/articles?q=&userId=` | 文章列表（分頁，`q` 模糊搜尋標題、`userId` 只看某使用者的文章） |
 | GET | `/api/articles/:id` | 單篇文章 |
 | POST | `/api/articles` | 建立文章 |
 | PUT | `/api/articles/:id` | 更新文章 |
@@ -72,6 +73,20 @@ forum/
 Windows 用 Git Bash 跑同一行。
 
 第一次跑約 **5-10 分鐘**（要 build image、下載 Maven 套件、裝 npm 套件）。
+
+---
+
+## 常用 Docker 指令
+
+```bash
+docker compose up -d              # 啟動（背景）
+docker compose down               # 停止 + 移除 container（DB 資料保留）
+docker compose down -v            # 連 DB volume 一起砍（資料清空）
+docker compose logs -f backend    # 看 Spring Boot 即時 log
+docker compose logs -f frontend   # 看 Vite 即時 log
+docker compose exec backend bash  # 進到 backend container 內部
+docker compose exec db mysql -uroot -proot forum    # 進 MySQL CLI
+```
 
 ---
 
