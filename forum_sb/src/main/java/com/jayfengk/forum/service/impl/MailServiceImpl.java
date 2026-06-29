@@ -10,9 +10,10 @@ import org.springframework.stereotype.Service;
 /**
  * 郵件實作（使用 Spring Mail 的 JavaMailSender）
  * ============================================================
- * 開發環境建議搭配 MailHog：
- *   - 安裝：scoop install mailhog  或  docker run -p 1025:1025 -p 8025:8025 mailhog/mailhog
- *   - 啟動後 SMTP 在 :1025、Web UI 在 http://localhost:8025
+ * 開發環境：本專案 docker-compose 已內建 Mailpit container：
+ *   - SMTP   → mailpit:1025（container 內網，給 backend 用）
+ *                host 1026  → SMTP（外部工具測試用）
+ *   - Web UI → http://localhost:8026
  *   - 所有寄出的信都會被攔下來，可以在 web UI 看到內容（不會真的寄出）
  */
 @Service

@@ -43,7 +43,7 @@ async function onSubmit() {
   loading.value = true
   try {
     await forgotPasswordApi(form.email)
-    ElMessage.success('若信箱存在，重設信件已寄出，請至信箱查收（開發環境用 MailHog: http://localhost:8025）')
+    ElMessage.success('若信箱存在，重設信件已寄出，請至信箱查收（開發環境用 Mailpit: http://localhost:8026）')
   } finally {
     loading.value = false
   }
