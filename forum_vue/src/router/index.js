@@ -11,6 +11,8 @@ const routes = [
   { path: '/register', name: 'register', component: () => import('@/views/Register.vue'), meta: { guestOnly: true } },
   { path: '/forgot-password', name: 'forgot-password', component: () => import('@/views/ForgotPassword.vue'), meta: { guestOnly: true } },
   { path: '/reset-password', name: 'reset-password', component: () => import('@/views/ResetPassword.vue'), meta: { guestOnly: true } },
+  // 變更 email 驗證頁（信件連結會導到這裡）。不能 guestOnly — 使用者可能還登著舊 session。
+  { path: '/verify-email-change', name: 'verify-email-change', component: () => import('@/views/VerifyEmailChange.vue') },
 
   // ---------- 文章（公開的列表 / 單篇 + 需登入的建立 / 編輯） ----------
   {
