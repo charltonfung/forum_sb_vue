@@ -23,6 +23,7 @@
             </span>
             <template #dropdown>
               <el-dropdown-menu>
+                <el-dropdown-item command="my-articles">我的文章</el-dropdown-item>
                 <el-dropdown-item command="profile">個人資料</el-dropdown-item>
                 <el-dropdown-item divided command="logout">登出</el-dropdown-item>
               </el-dropdown-menu>
@@ -44,7 +45,10 @@ const auth = useAuthStore()
 const router = useRouter()
 
 function handleCommand(cmd) {
-  if (cmd === 'profile') {
+  if (cmd === 'my-articles') {
+    // 走首頁 + ?userId= 過濾，ArticleList.vue 看到 query 會自動切「我的文章」模式
+    router.push({ path: '/', query: { userId: auth.currentUserId } })
+  } else if (cmd === 'profile') {
     router.push('/profile')
   } else if (cmd === 'logout') {
     auth.logout()

@@ -1,8 +1,10 @@
 // 文章 API
 import request from './request'
 
-export const listArticles = (page = 1, pageSize = 10, q = '') =>
-  request.get('/api/articles', { params: { page, pageSize, q: q || undefined } })
+export const listArticles = (page = 1, pageSize = 10, q = '', userId = null) =>
+  request.get('/api/articles', {
+    params: { page, pageSize, q: q || undefined, userId: userId || undefined }
+  })
 
 export const getArticle = (id) =>
   request.get(`/api/articles/${id}`)

@@ -1,7 +1,7 @@
 <template>
   <div>
     <div class="header-row">
-      <h1 class="page-title">最新文章</h1>
+      <h1 class="page-title">{{ pageTitle }}</h1>
       <el-button v-if="auth.isLoggedIn" type="primary" @click="$router.push('/articles/create')">
         發表文章
       </el-button>
@@ -72,7 +72,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { listArticles, deleteArticle } from '@/api/article'
 import { likeArticle, unlikeArticle } from '@/api/like'
 import { useAuthStore } from '@/stores/auth'
@@ -81,12 +82,26 @@ import { User, Search } from '@element-plus/icons-vue'
 import LikeButton from '@/components/LikeButton.vue'
 
 const auth = useAuthStore()
+const route = useRoute()
 
 const loading = ref(false)
 const articles = ref([])
 const total = ref(0)
 const page = ref(1)
 const pageSize = ref(10)
+
+// route.query.userId 存在 → 「我的文章」模式（或「某使用者的文章」）
+// AppHeader 下拉的「我的文章」會帶 ?userId=<當前使用者 id>
+const filterUserId = computed(() => {
+  const v = route.query.userId
+  return v ? Number(v) : null
+})
+
+const pageTitle = computed(() => {
+  if (filterUserId.value && filterUserId.value === auth.currentUserId) return '我的文章'
+  if (filterUserId.value) return '使用者文章'
+  return '最新文章'
+})
 
 // searchInput = 輸入框即時值（每按鍵都變）
 // keyword     = 真正送到 API 的值（debounce 後才同步）
@@ -107,13 +122,21 @@ watch(searchInput, (val) => {
 async function fetch() {
   loading.value = true
   try {
-    const data = await listArticles(page.value, pageSize.value, keyword.value)
+    const data = await listArticles(page.value, pageSize.value, keyword.value, filterUserId.value)
     articles.value = data.items
     total.value = data.total
   } finally {
     loading.value = false
   }
 }
+
+// URL 上的 ?userId= 變了（例如點 nav bar 的「我的文章」/「首頁」切換）→ 回第 1 頁重撈
+watch(filterUserId, () => {
+  page.value = 1
+  searchInput.value = ''   // 切模式時清掉搜尋字串，避免「我的文章」還掛著首頁搜過的關鍵字
+  keyword.value = ''
+  fetch()
+})
 
 async function onDelete(id) {
   await deleteArticle(id)

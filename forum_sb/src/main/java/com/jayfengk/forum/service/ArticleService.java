@@ -10,8 +10,9 @@ public interface ArticleService {
      * 文章列表（分頁，新到舊）。
      * @param currentUserId 為 null 表示未登入，likedByMe 永遠為 false
      * @param keyword 模糊搜尋標題，null / 空字串 = 不過濾
+     * @param authorUserId 只看某使用者的文章（給「我的文章」用），null = 不過濾
      */
-    PageResult<ArticleDto> list(Long currentUserId, String keyword, long page, long pageSize);
+    PageResult<ArticleDto> list(Long currentUserId, String keyword, Long authorUserId, long page, long pageSize);
 
     /** 單篇文章。currentUserId 為 null 表示未登入。 */
     ArticleDto get(Long currentUserId, Long id);
