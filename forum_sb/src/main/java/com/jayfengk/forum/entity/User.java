@@ -36,6 +36,15 @@ public class User implements Serializable {
     private String password;
 
     private LocalDateTime emailVerifiedAt;
+
+    /**
+     * 帳密變更時間（改密碼 / 改 email 時更新）。
+     * JWT filter 驗證時若 token.iat < credentialsChangedAt 視為失效，強制重新登入。
+     * 加 @JsonIgnore 避免外洩到前端（內部安全欄位）。
+     */
+    @JsonIgnore
+    private LocalDateTime credentialsChangedAt;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

@@ -84,6 +84,12 @@ forum:
     frontend-reset-url: ${FRONTEND_RESET_URL:http://localhost:5173/reset-password}
     mail-from: ${MAIL_FROM:no-reply@forum.local}
 
+  email-change:
+    # 變更 email 驗證連結有效時間（分鐘）
+    expiration-minutes: 60
+    # 驗證連結指向「前端 verify 頁」，格式：{frontend-base-url}/verify-email-change?token=xxx
+    frontend-verify-url: ${FRONTEND_EMAIL_CHANGE_VERIFY_URL:http://localhost:5173/verify-email-change}
+
   cors:
     # 允許的前端來源。Vite dev server 預設 5173
     allowed-origins:

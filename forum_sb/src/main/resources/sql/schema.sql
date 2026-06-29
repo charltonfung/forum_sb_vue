@@ -14,15 +14,19 @@
 -- users 表
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS users (
-    id                BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主鍵',
-    name              VARCHAR(255)    NOT NULL                COMMENT '顯示名稱',
-    email             VARCHAR(255)    NOT NULL                COMMENT '登入帳號（唯一）',
-    email_verified_at DATETIME        NULL                    COMMENT 'Email 驗證時間（MVP 暫不使用）',
-    password          VARCHAR(255)    NOT NULL                COMMENT 'BCrypt 雜湊後的密碼',
-    created_at        DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at        DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    id                      BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主鍵',
+    name                    VARCHAR(255)    NOT NULL                COMMENT '顯示名稱',
+    email                   VARCHAR(255)    NOT NULL                COMMENT '登入帳號（唯一）',
+    email_verified_at       DATETIME        NULL                    COMMENT 'Email 驗證時間（MVP 暫不使用）',
+    password                VARCHAR(255)    NOT NULL                COMMENT 'BCrypt 雜湊後的密碼',
+    -- 改密碼 / 改 email 時更新成 NOW()。
+    -- JWT 驗證時：若 token 的 iat < credentials_changed_at，視為失效（強制重新登入）。
+    credentials_changed_at  DATETIME        NULL                    COMMENT '帳密變更時間，作為 JWT 失效水位線',
+    created_at              DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at              DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
-    UNIQUE KEY uk_users_email (email)
+    UNIQUE KEY uk_users_email (email),
+    UNIQUE KEY uk_users_name (name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='使用者';
 
 -- ------------------------------------------------------------
@@ -54,6 +58,21 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
     created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (email)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='密碼重設 token';
+
+-- ------------------------------------------------------------
+-- email_change_tokens 表（變更 email 驗證 token）
+-- ------------------------------------------------------------
+-- 跟 password_reset_tokens 同樣設計（user_id 是 PK、token 存 SHA-256 hash、明文走 email），
+-- 多帶一個 new_email 欄位記「要改成什麼」。一個使用者只保留一筆有效驗證 token：
+-- 第二次申請會覆蓋第一次的（先 DELETE WHERE user_id = ? 再 INSERT）。
+CREATE TABLE IF NOT EXISTS email_change_tokens (
+    user_id    BIGINT UNSIGNED NOT NULL,
+    new_email  VARCHAR(255)    NOT NULL                COMMENT '要改成的新 email',
+    token      VARCHAR(255)    NOT NULL                COMMENT 'SHA-256 雜湊後的 token',
+    created_at DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id),
+    CONSTRAINT fk_email_change_tokens_user FOREIGN KEY (user_id) REFERENCES users (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='變更 email 驗證 token';
 
 -- ------------------------------------------------------------
 -- comments 表（文章留言，軟刪除）

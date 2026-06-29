@@ -67,20 +67,27 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     public LoginResponse register(RegisterRequest req) {
         // 1. 檢查 email 是否已被註冊
-        Long count = userMapper.selectCount(
+        Long emailCount = userMapper.selectCount(
                 new LambdaQueryWrapper<User>().eq(User::getEmail, req.getEmail()));
-        if (count != null && count > 0) {
+        if (emailCount != null && emailCount > 0) {
             throw new ApiException(ResultCode.VALIDATE_FAILED, "email 已被註冊");
         }
 
-        // 2. 寫入 user
+        // 2. 檢查名稱不能跟別人撞
+        Long nameCount = userMapper.selectCount(
+                new LambdaQueryWrapper<User>().eq(User::getName, req.getName()));
+        if (nameCount != null && nameCount > 0) {
+            throw new ApiException(ResultCode.VALIDATE_FAILED, "此名稱已被使用");
+        }
+
+        // 3. 寫入 user
         User user = new User();
         user.setName(req.getName());
         user.setEmail(req.getEmail());
         user.setPassword(passwordEncoder.encode(req.getPassword()));
         userMapper.insert(user);
 
-        // 3. 簽 token 直接回（註冊後立即登入）
+        // 4. 簽 token 直接回（註冊後立即登入）
         return issueToken(user);
     }
 

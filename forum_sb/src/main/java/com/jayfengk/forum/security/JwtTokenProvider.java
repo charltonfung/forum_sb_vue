@@ -70,6 +70,20 @@ public class JwtTokenProvider {
         return claims == null ? null : claims.get("email", String.class);
     }
 
+    /**
+     * 取 token 的 issued-at（簽發時間），轉成系統預設時區的 LocalDateTime。
+     * JwtAuthenticationFilter 用這個跟 user.credentialsChangedAt 比，
+     * 若 iat < credentialsChangedAt 就視為失效 token。
+     * 解析失敗回 null。
+     */
+    public java.time.LocalDateTime getIssuedAt(String token) {
+        Claims claims = parse(token);
+        if (claims == null || claims.getIssuedAt() == null) return null;
+        return java.time.LocalDateTime.ofInstant(
+                claims.getIssuedAt().toInstant(),
+                java.time.ZoneId.systemDefault());
+    }
+
     public boolean validate(String token) {
         return parse(token) != null;
     }

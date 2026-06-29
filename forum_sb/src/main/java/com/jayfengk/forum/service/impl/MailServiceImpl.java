@@ -43,4 +43,26 @@ public class MailServiceImpl implements MailService {
                 """.formatted(resetUrl));
         mailSender.send(msg);
     }
+
+    @Override
+    public void sendEmailChangeVerificationMail(String toNewEmail, String verifyUrl) {
+        SimpleMailMessage msg = new SimpleMailMessage();
+        msg.setFrom(mailFrom);
+        msg.setTo(toNewEmail);
+        msg.setSubject("【Forum】Email 變更驗證");
+        msg.setText("""
+                您好，
+
+                我們收到將帳號 email 變更為此信箱的請求。請點以下連結完成驗證（連結 60 分鐘內有效）：
+
+                %s
+
+                點擊後，您的 Forum 帳號 email 將會變更為這個信箱，舊登入狀態會失效，請用新 email 重新登入。
+
+                如果不是您本人操作，請忽略此信件。
+
+                — Forum
+                """.formatted(verifyUrl));
+        mailSender.send(msg);
+    }
 }

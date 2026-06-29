@@ -55,8 +55,9 @@ public class SecurityConfig {
 
                 // 授權規則
                 .authorizeHttpRequests(auth -> auth
-                        // 公開端點：登入註冊、密碼重設、文章列表/單篇瀏覽、留言列表
+                        // 公開端點：登入註冊、密碼重設、email 變更驗證、文章列表/單篇瀏覽、留言列表
                         .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/users/verify-email-change").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/articles", "/api/articles/*").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/articles/*/comments").permitAll()
                         // 預檢請求 OPTIONS 一律放行（CORS 機制）

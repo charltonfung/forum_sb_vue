@@ -24,7 +24,6 @@ public final class SecurityConstants {
 
     /**
      * BCrypt 加密強度
-     * - 10 是業界標準（Laravel / Spring Security 預設都是 10）
      * - 每 +1 加密時間翻倍：10 約 100ms、12 約 400ms、14 約 1.6s
      * - 10 對 2024+ 硬體已足夠抵抗暴力破解
      */

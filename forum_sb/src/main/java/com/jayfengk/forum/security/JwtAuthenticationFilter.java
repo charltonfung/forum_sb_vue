@@ -15,6 +15,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 
 /**
  * JWT 驗證 filter（每個 request 進來都會檢查 Authorization header）
@@ -49,7 +50,24 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (token != null && tokenProvider.validate(token)) {
             String email = tokenProvider.getEmail(token);
             if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+                // 把 loadUserByUsername 包起來：使用者改了 email 之後，舊 JWT 裡的 email
+                // 在 DB 找不到 → UsernameNotFoundException。這時 token 本來就該失效，
+                // 不要讓例外冒到 controller 變 500，靜靜走過去讓 Spring Security 回 401。
+                UserDetails userDetails;
+                try {
+                    userDetails = userDetailsService.loadUserByUsername(email);
+                } catch (Exception e) {
+                    chain.doFilter(request, response);
+                    return;
+                }
+
+                // ★ 失效水位線檢查：若 token.iat < user.credentials_changed_at，視為失效。
+                //   這樣使用者改密碼 / 改 email 後，所有比那時間早簽出的 JWT 都會被拒。
+                if (isStaleToken(token, userDetails)) {
+                    chain.doFilter(request, response);
+                    return; // 不放 Authentication → SecurityConfig 後續會回 401
+                }
+
                 UsernamePasswordAuthenticationToken auth =
                         new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
                 auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
@@ -57,6 +75,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
         }
         chain.doFilter(request, response);
+    }
+
+    /**
+     * token.iat 早於使用者 credentialsChangedAt 就視為失效。
+     * credentialsChangedAt = null 表示從沒改過密碼 / email，所有 token 都有效。
+     */
+    private boolean isStaleToken(String token, UserDetails userDetails) {
+        if (!(userDetails instanceof AuthUser authUser)) return false;
+        LocalDateTime credChangedAt = authUser.getUser().getCredentialsChangedAt();
+        if (credChangedAt == null) return false;
+        LocalDateTime iat = tokenProvider.getIssuedAt(token);
+        // iat 拿不到代表 token 壞掉 — 算它失效比較安全
+        return iat == null || iat.isBefore(credChangedAt);
     }
 
     /**
