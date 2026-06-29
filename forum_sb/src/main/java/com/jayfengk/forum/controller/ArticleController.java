@@ -44,12 +44,13 @@ public class ArticleController {
     @GetMapping
     public Result<PageResult<ArticleDto>> list(
             @AuthenticationPrincipal AuthUser currentUser,   // 公開端點，未登入時為 null
+            @RequestParam(required = false) String q,        // 模糊搜尋標題，可選
             @RequestParam(defaultValue = PaginationConstants.DEFAULT_PAGE) long page,
             @RequestParam(defaultValue = PaginationConstants.DEFAULT_PAGE_SIZE) long pageSize) {
         Long uid = currentUser == null ? null : currentUser.getId();
         // 用 Math.min 卡住上限，防 ?pageSize=999999 把 DB / 記憶體撈爆
         long safePageSize = Math.min(pageSize, PaginationConstants.MAX_PAGE_SIZE);
-        return Result.success(articleService.list(uid, page, safePageSize));
+        return Result.success(articleService.list(uid, q, page, safePageSize));
     }
 
     @GetMapping("/{id}")

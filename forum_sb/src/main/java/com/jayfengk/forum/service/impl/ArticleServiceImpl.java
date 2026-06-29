@@ -43,9 +43,12 @@ public class ArticleServiceImpl implements ArticleService {
     private final ArticleLikeMapper articleLikeMapper;
 
     @Override
-    public PageResult<ArticleDto> list(Long currentUserId, long page, long pageSize) {
+    public PageResult<ArticleDto> list(Long currentUserId, String keyword, long page, long pageSize) {
         Page<Article> pager = new Page<>(page, pageSize);
         LambdaQueryWrapper<Article> wrapper = new LambdaQueryWrapper<Article>()
+                // 有 keyword 才加 LIKE %?% 條件；MyBatis-Plus 的 like() 會自動 prepared-statement，
+                // 不會 SQL injection。空字串視為「不搜尋」。
+                .like(keyword != null && !keyword.isBlank(), Article::getTitle, keyword)
                 .orderByDesc(Article::getId);
         Page<Article> result = articleMapper.selectPage(pager, wrapper);
 

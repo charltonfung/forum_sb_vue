@@ -7,7 +7,20 @@
       </el-button>
     </div>
 
-    <el-empty v-if="!loading && articles.length === 0" description="還沒有文章，搶第一篇吧！" />
+    <!-- 搜尋列：輸入後 debounce 300ms 才打 API，避免每按一鍵都打 -->
+    <div class="search-row">
+      <el-input
+        v-model="searchInput"
+        placeholder="搜尋文章標題…"
+        clearable
+        :prefix-icon="Search"
+      />
+    </div>
+
+    <el-empty
+      v-if="!loading && articles.length === 0"
+      :description="keyword ? `沒有符合「${keyword}」的文章` : '還沒有文章，搶第一篇吧！'"
+    />
 
     <div v-loading="loading" class="list">
       <el-card v-for="a in articles" :key="a.id" class="article-card" shadow="hover">
@@ -59,12 +72,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { listArticles, deleteArticle } from '@/api/article'
 import { likeArticle, unlikeArticle } from '@/api/like'
 import { useAuthStore } from '@/stores/auth'
 import { ElMessage } from 'element-plus'
-import { User } from '@element-plus/icons-vue'
+import { User, Search } from '@element-plus/icons-vue'
 import LikeButton from '@/components/LikeButton.vue'
 
 const auth = useAuthStore()
@@ -75,10 +88,26 @@ const total = ref(0)
 const page = ref(1)
 const pageSize = ref(10)
 
+// searchInput = 輸入框即時值（每按鍵都變）
+// keyword     = 真正送到 API 的值（debounce 後才同步）
+const searchInput = ref('')
+const keyword = ref('')
+
+// debounce：使用者停止輸入 300ms 後才更新 keyword → 觸發 fetch
+let searchTimer = null
+watch(searchInput, (val) => {
+  clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => {
+    keyword.value = val.trim()
+    page.value = 1            // 換關鍵字一定要回第一頁
+    fetch()
+  }, 300)
+})
+
 async function fetch() {
   loading.value = true
   try {
-    const data = await listArticles(page.value, pageSize.value)
+    const data = await listArticles(page.value, pageSize.value, keyword.value)
     articles.value = data.items
     total.value = data.total
   } finally {
@@ -116,8 +145,7 @@ function formatDate(iso) {
 }
 
 function excerpt(content) {
-  if (!content) return ''
-  return content.length > 120 ? content.slice(0, 120) + '...' : content
+  return content || ''
 }
 
 onMounted(fetch)
@@ -128,6 +156,9 @@ onMounted(fetch)
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 16px;
+}
+.search-row {
   margin-bottom: 16px;
 }
 .page-title {
@@ -168,8 +199,14 @@ onMounted(fetch)
 .excerpt {
   color: #606266;
   margin: 0 0 12px;
-  white-space: pre-wrap;
   line-height: 1.6;
+  /* 保留原始換行（pre-wrap）+ 限制顯示 3 行，超過用 ... 截斷。
+     文章裡 \n\n 的空行也算 1 行，所以 3 行可能很快用完 — 這是預期行為。 */
+  white-space: pre-wrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 .actions {
   display: flex;
