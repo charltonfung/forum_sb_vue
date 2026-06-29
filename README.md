@@ -59,18 +59,11 @@ forum/
 
 只要本機有 **Docker Desktop**，跑一個 script 就會把所有東西準備好：MySQL + Mailpit + Spring Boot 後端 + Vue 前端 + 灌好 demo 資料。
 
-### Mac / Linux
-
 ```bash
-chmod +x setup.sh db-init.sh db-reset.sh
 ./setup.sh
 ```
 
-### Windows
-
-```powershell
-.\setup.ps1
-```
+Windows 用 Git Bash 跑同一行。
 
 第一次跑約 **5-10 分鐘**（要 build image、下載 Maven 套件、裝 npm 套件）。
 
@@ -83,8 +76,7 @@ chmod +x setup.sh db-init.sh db-reset.sh
 ### DB init
 
 ```bash
-./db-init.sh     # Mac / Linux
-.\db-init.ps1    # Windows
+./db-init.sh
 ```
 
 套用 `schema.sql`（CREATE TABLE IF NOT EXISTS，重複跑安全）+ 若 `users` 表為空才灌 `seed.sql`。
@@ -92,8 +84,7 @@ chmod +x setup.sh db-init.sh db-reset.sh
 ### DB reset
 
 ```bash
-./db-reset.sh    # Mac / Linux
-.\db-reset.ps1   # Windows
+./db-reset.sh
 ```
 
 DROP 全部表 → 重新跑 db-init。
